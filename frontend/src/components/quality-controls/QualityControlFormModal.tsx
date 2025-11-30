@@ -4,7 +4,8 @@ import { X, Plus, Trash2, Upload } from 'lucide-react';
 import { qualityService } from '@/services/quality.service';
 import { productService } from '@/services/product.service';
 import { inventoryService } from '@/services/inventory.service';
-import { QualityControl, InspectionResult, Item } from '@/types';
+import { locationService } from '@/services/location.service';
+import { QualityControl, InspectionResult, Item, Location } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -26,8 +27,10 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
   const [loading, setLoading] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
   const [loadingLots, setLoadingLots] = useState(false);
+  const [loadingLocations, setLoadingLocations] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [lots, setLots] = useState<any[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
 
   const [formData, setFormData] = useState<Partial<QualityControl>>({
     itemId: '',
@@ -47,10 +50,11 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
   const [attachments, setAttachments] = useState<File[]>([]);
   const [inspectionResults, setInspectionResults] = useState<InspectionResult[]>([]);
 
-  // Load items when modal opens
+  // Load items and locations when modal opens
   useEffect(() => {
     if (isOpen) {
       loadItems();
+      loadLocations();
     }
   }, [isOpen]);
 
@@ -104,6 +108,20 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
     }
   };
 
+  const loadLocations = async () => {
+    setLoadingLocations(true);
+    try {
+      const response = await locationService.getLocations({ page: 0, size: 1000 });
+      const locationsList = Array.isArray(response) ? response : (response?.content || []);
+      setLocations(locationsList);
+    } catch (error) {
+      console.error('Failed to load locations:', error);
+      toast.error('Failed to load locations');
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       itemId: '',
@@ -123,6 +141,7 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
     setInspectionResults([]);
     setAttachments([]);
     setLots([]);
+    setLocations([]);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -392,13 +411,28 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Inspection Location
                 </label>
-                <Input
-                  type="text"
+                <Select
                   name="inspectionLocationId"
                   value={formData.inspectionLocationId || ''}
                   onChange={handleChange}
-                  placeholder="Enter location ID"
-                />
+                  disabled={loadingLocations}
+                >
+                  <option value="">
+                    {loadingLocations ? 'Loading locations...' : 'Select a location (optional)'}
+                  </option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                      {location.warehouseName ? ` - ${location.warehouseName}` : ''}
+                      {location.zone ? ` (${location.zone})` : ''}
+                    </option>
+                  ))}
+                </Select>
+                {locations.length === 0 && !loadingLocations && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    No locations available
+                  </p>
+                )}
               </div>
 
               <div>
@@ -628,7 +662,7 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || loadingItems}>
+            <Button type="submit" disabled={loading || loadingItems || loadingLocations}>
               {loading ? 'Saving...' : qualityControl ? 'Update' : 'Create'}
             </Button>
           </div>
