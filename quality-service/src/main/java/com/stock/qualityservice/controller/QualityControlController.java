@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/quality/controls")
+@RequestMapping("/api/quality-controls")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Quality Control", description = "Quality Control Management APIs")

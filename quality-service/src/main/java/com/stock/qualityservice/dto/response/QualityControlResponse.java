@@ -17,6 +17,7 @@ public class QualityControlResponse {
 
     private String id;
     private String inspectionNumber;
+    private String controlNumber;  // Alias for inspectionNumber (frontend compatibility)
     private String itemId;
     private String lotId;
     private String serialNumber;

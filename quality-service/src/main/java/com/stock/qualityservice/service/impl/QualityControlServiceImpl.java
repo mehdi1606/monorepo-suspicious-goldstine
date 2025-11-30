@@ -247,6 +247,7 @@ public class QualityControlServiceImpl implements QualityControlService {
         QualityControlResponse response = new QualityControlResponse();
         response.setId(inspection.getId());
         response.setInspectionNumber(inspection.getInspectionNumber());
+        response.setControlNumber(inspection.getInspectionNumber());  // Frontend compatibility
         response.setItemId(inspection.getItemId());
         response.setLotId(inspection.getLotId());
         response.setSerialNumber(inspection.getSerialNumber());

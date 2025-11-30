@@ -29,6 +29,25 @@ export const qualityService = {
     return response.data;
   },
 
+  approveQualityControl: async (id: string): Promise<QualityControl> => {
+    const response = await apiClient.patch<QualityControl>(`${API_ENDPOINTS.QUALITY.QUALITY_CONTROLS}/${id}/approve`);
+    return response.data;
+  },
+
+  rejectQualityControl: async (id: string, reason: string): Promise<QualityControl> => {
+    const response = await apiClient.patch<QualityControl>(`${API_ENDPOINTS.QUALITY.QUALITY_CONTROLS}/${id}/reject`, null, {
+      params: { reason }
+    });
+    return response.data;
+  },
+
+  updateQualityControlStatus: async (id: string, status: string): Promise<QualityControl> => {
+    const response = await apiClient.patch<QualityControl>(`${API_ENDPOINTS.QUALITY.QUALITY_CONTROLS}/${id}/status`, null, {
+      params: { status }
+    });
+    return response.data;
+  },
+
   // Quarantine
   getQuarantines: async (params?: PaginationParams): Promise<PaginatedResponse<Quarantine>> => {
     const response = await apiClient.get<PaginatedResponse<Quarantine>>(API_ENDPOINTS.QUALITY.QUARANTINE, { params });
@@ -63,6 +82,27 @@ export const qualityService = {
 
   getAttachmentById: async (id: string): Promise<QualityAttachment> => {
     const response = await apiClient.get<QualityAttachment>(API_ENDPOINTS.QUALITY.ATTACHMENT_BY_ID(id));
+    return response.data;
+  },
+
+  getAttachmentsByQualityControl: async (qualityControlId: string): Promise<QualityAttachment[]> => {
+    const response = await apiClient.get<QualityAttachment[]>(`${API_ENDPOINTS.QUALITY.ATTACHMENTS}/quality-control/${qualityControlId}`);
+    return response.data;
+  },
+
+  uploadAttachment: async (file: File, qualityControlId?: string, quarantineId?: string, description?: string, attachmentType?: string): Promise<QualityAttachment> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (qualityControlId) formData.append('qualityControlId', qualityControlId);
+    if (quarantineId) formData.append('quarantineId', quarantineId);
+    if (description) formData.append('description', description);
+    if (attachmentType) formData.append('attachmentType', attachmentType);
+
+    const response = await apiClient.post<QualityAttachment>(API_ENDPOINTS.QUALITY.ATTACHMENTS, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

@@ -19,7 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/quality/attachments")
+@RequestMapping("/api/quality-attachments")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Quality Attachments", description = "Quality Attachment Management APIs")

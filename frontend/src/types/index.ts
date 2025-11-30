@@ -454,23 +454,60 @@ export interface Location {
 
 export interface QualityControl {
   id: string;
+  inspectionNumber?: string;
   controlNumber: string;
   itemId: string;
   item?: Item;
   lotId?: string;
   lot?: Lot;
-  serialId?: string;
-  serial?: Serial;
-  inspectionType: string;
-  status: string;
-  testResults?: Record<string, any>;
-  passed: boolean;
-  testedBy?: string;
-  testedByName?: string;
-  testedDate?: string;
-  notes?: string;
+  serialNumber?: string;
+  quantityInspected: number;
+  inspectionType: string; // QCType enum values
+  status: string; // QCStatus enum values
+  qualityProfileId?: string;
+  samplingPlanId?: string;
+  inspectorId: string;
+  inspectionLocationId?: string;
+  scheduledDate?: string;
+  startTime?: string;
+  endTime?: string;
+  disposition?: string; // Disposition enum values
+  passedQuantity?: number;
+  failedQuantity?: number;
+  defectCount?: number;
+  defectRate?: number;
+  inspectorNotes?: string;
+  correctiveAction?: string;
+  quarantineId?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  inspectionResults?: InspectionResult[];
   createdAt: string;
   updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  // Deprecated fields for backwards compatibility
+  passed?: boolean;
+  testedBy?: string;
+  testedDate?: string;
+  notes?: string;
+}
+
+export interface InspectionResult {
+  id?: string;
+  qualityControlId?: string;
+  testParameter: string;
+  expectedValue?: string;
+  actualValue?: string;
+  unitOfMeasure?: string;
+  minValue?: number;
+  maxValue?: number;
+  isPassed: boolean;
+  defectType?: string;
+  defectSeverity?: string; // CRITICAL, MAJOR, MINOR
+  remarks?: string;
+  sequenceOrder?: number;
+  createdAt?: string;
 }
 
 export interface Quarantine {
