@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Upload } from 'lucide-react';
 import { qualityService } from '@/services/quality.service';
-import { QualityControl, InspectionResult } from '@/types';
+import { productService } from '@/services/product.service';
+import { inventoryService } from '@/services/inventory.service';
+import { QualityControl, InspectionResult, Item } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -22,6 +24,11 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
   qualityControl
 }) => {
   const [loading, setLoading] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [loadingLots, setLoadingLots] = useState(false);
+  const [items, setItems] = useState<Item[]>([]);
+  const [lots, setLots] = useState<any[]>([]);
+
   const [formData, setFormData] = useState<Partial<QualityControl>>({
     itemId: '',
     lotId: '',
@@ -40,6 +47,22 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
   const [attachments, setAttachments] = useState<File[]>([]);
   const [inspectionResults, setInspectionResults] = useState<InspectionResult[]>([]);
 
+  // Load items when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadItems();
+    }
+  }, [isOpen]);
+
+  // Load lots when item is selected
+  useEffect(() => {
+    if (formData.itemId) {
+      loadLots(formData.itemId);
+    } else {
+      setLots([]);
+    }
+  }, [formData.itemId]);
+
   useEffect(() => {
     if (qualityControl) {
       setFormData({
@@ -51,6 +74,35 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
       resetForm();
     }
   }, [qualityControl, isOpen]);
+
+  const loadItems = async () => {
+    setLoadingItems(true);
+    try {
+      const response = await productService.getItems({ page: 0, size: 1000 });
+      const itemsList = Array.isArray(response) ? response : (response?.content || []);
+      setItems(itemsList);
+    } catch (error) {
+      console.error('Failed to load items:', error);
+      toast.error('Failed to load items');
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  const loadLots = async (itemId: string) => {
+    setLoadingLots(true);
+    try {
+      const response = await inventoryService.getLotsByItem(itemId);
+      const lotsList = Array.isArray(response) ? response : (response?.content || response?.data || []);
+      setLots(lotsList);
+    } catch (error) {
+      console.error('Failed to load lots:', error);
+      // Don't show error toast as lots might not exist for all items
+      setLots([]);
+    } finally {
+      setLoadingLots(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -70,6 +122,7 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
     });
     setInspectionResults([]);
     setAttachments([]);
+    setLots([]);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -169,6 +222,8 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
 
   if (!isOpen) return null;
 
+  const selectedItem = items.find(item => item.id === formData.itemId);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto m-4">
@@ -191,31 +246,66 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
           <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Item Selection Dropdown */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Item ID <span className="text-red-500">*</span>
+                  Item / Product <span className="text-red-500">*</span>
                 </label>
-                <Input
-                  type="text"
+                <Select
                   name="itemId"
                   value={formData.itemId}
                   onChange={handleChange}
                   required
-                  placeholder="Enter item ID"
-                />
+                  disabled={loadingItems}
+                >
+                  <option value="">
+                    {loadingItems ? 'Loading items...' : 'Select an item'}
+                  </option>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} {item.sku ? `(${item.sku})` : ''}
+                    </option>
+                  ))}
+                </Select>
+                {selectedItem && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    SKU: {selectedItem.sku || 'N/A'}
+                  </p>
+                )}
               </div>
 
+              {/* Lot Selection Dropdown */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Lot ID
+                  Lot / Batch Number
                 </label>
-                <Input
-                  type="text"
+                <Select
                   name="lotId"
                   value={formData.lotId || ''}
                   onChange={handleChange}
-                  placeholder="Enter lot ID"
-                />
+                  disabled={!formData.itemId || loadingLots}
+                >
+                  <option value="">
+                    {!formData.itemId
+                      ? 'Select an item first'
+                      : loadingLots
+                      ? 'Loading lots...'
+                      : lots.length === 0
+                      ? 'No lots available'
+                      : 'Select a lot (optional)'}
+                  </option>
+                  {lots.map((lot) => (
+                    <option key={lot.id} value={lot.id}>
+                      {lot.lotNumber || lot.batchNumber || lot.id}
+                      {lot.expiryDate ? ` (Exp: ${new Date(lot.expiryDate).toLocaleDateString()})` : ''}
+                    </option>
+                  ))}
+                </Select>
+                {lots.length === 0 && formData.itemId && !loadingLots && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    No lots found for this item
+                  </p>
+                )}
               </div>
 
               <div>
@@ -538,7 +628,7 @@ export const QualityControlFormModal: React.FC<QualityControlFormModalProps> = (
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || loadingItems}>
               {loading ? 'Saving...' : qualityControl ? 'Update' : 'Create'}
             </Button>
           </div>
